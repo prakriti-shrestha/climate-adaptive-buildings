@@ -3,6 +3,14 @@ import pandas as pd
 import os
 import joblib
 
+st.markdown("""
+<style>
+.main {
+    background-color: #f5f7fa;
+}
+</style>
+""", unsafe_allow_html=True)
+
 # ----------------------------
 # LOAD MODEL + DATA
 # ----------------------------
@@ -105,24 +113,87 @@ def find_best_design_yearly(model, df, city, reference_columns):
 # ----------------------------
 # EXPLANATION
 # ----------------------------
-def generate_explanation(city, score, avg_temp, avg_humidity):
-    if score < 50:
-        return f"{city.title()} experiences significant thermal stress due to high temperatures and/or humidity. Passive design helps, but active cooling may be required."
 
-    elif score < 75:
-        return f"{city.title()} has moderate thermal stress. High humidity ({avg_humidity:.1f}%) reduces cooling efficiency, so airflow-based designs like courtyards are effective."
+@st.cache_data
+def get_best_design_cached(city):
+    return find_best_design_yearly(model, df, city, features)
 
-    else:
-        return f"{city.title()} has relatively comfortable climate conditions. Standard design works, but optimized ventilation improves comfort."
+def generate_explanation(city, score, avg_temp, avg_humidity, design):
+    explanation = f"""
+### Climate Analysis for {city.title()}
+
+- Average Temperature: **{avg_temp:.1f}°C**
+- Average Humidity: **{avg_humidity:.1f}%**
+
+This indicates that the region experiences {'high humidity' if avg_humidity > 65 else 'moderate humidity'}, 
+which significantly affects thermal comfort.
+
+---
+
+### Why this design?
+
+- The **{design['shape']} layout** is recommended because this region benefits from improved airflow due to {'high humidity' if avg_humidity > 65 else 'moderate humidity'}  
+- **{design['insulation']}** helps reduce heat transfer from outside  
+- **{design['window']}** ensures a balance between ventilation and solar heat gain  
+
+---
+
+### Key Insight
+
+Even with optimal design, climate remains the dominant factor.  
+This design minimizes discomfort but may still require mechanical cooling during extreme months.
+"""
+    return explanation
 
 # ----------------------------
 # UI
 # ----------------------------
+
+def format_design(design):
+    insulation_map = {
+        0: "Low (basic wall)",
+        1: "Medium (insulated wall)",
+        2: "High (thick insulated wall)"
+    }
+
+    window_map = {
+        0.2: "Small windows (low heat gain)",
+        0.4: "Balanced windows (recommended)",
+        0.6: "Large windows (high ventilation, more heat)"
+    }
+
+    shape_map = {
+        "rectangular": "Rectangular (standard design)",
+        "L": "L-shaped (moderate airflow)",
+        "H": "H-shaped (good ventilation)",
+        "U": "U-shaped (semi-enclosed airflow)",
+        "courtyard": "Courtyard (maximum natural ventilation)"
+    }
+
+    return {
+        "shape": shape_map[design["shape"]],
+        "insulation": insulation_map[design["insulation"]],
+        "window": window_map[design["window_ratio"]],
+        "smart": "Yes (automatic adjustment)" if design["smart_window"] else "No"
+    }
+
+def interpret_score(score):
+    if score < 40:
+        return " Poor – High discomfort, active cooling required"
+    elif score < 60:
+        return " Moderate – Noticeable discomfort in hot months"
+    elif score < 80:
+        return " Good – Comfortable with proper design"
+    else:
+        return " Excellent – Naturally comfortable most of the year"
+
 st.set_page_config(page_title="Climate Adaptive Buildings", layout="centered")
 
-st.title("🏢 Climate Adaptive Building Design System")
+st.title("Climate Adaptive Building Design System")
+st.markdown("### AI-powered climate-responsive building design")
 
 st.markdown("Select a city to get the optimal building design based on climate conditions.")
+st.divider()
 
 # Load everything
 df = load_data()
@@ -135,23 +206,43 @@ city = st.selectbox("Select City", cities)
 
 if st.button("Get Best Design"):
 
-    best_design, score = find_best_design_yearly(model, df, city, features)
+    best_design, score = get_best_design_cached(city)
 
     # compute avg climate for explanation
     city_data = df[df["city"] == city]
     avg_temp = city_data["temp"].mean()
     avg_humidity = city_data["humidity"].mean()
 
-    st.subheader("🏆 Recommended Design")
+    st.markdown("## Recommended Design")
 
-    st.write(f"**Shape:** {best_design['shape']}")
-    st.write(f"**Insulation Level:** {best_design['insulation']}")
-    st.write(f"**Window Ratio:** {best_design['window_ratio']}")
-    st.write(f"**Smart Windows:** {'Yes' if best_design['smart_window'] else 'No'}")
+    formatted = format_design(best_design)
 
-    st.subheader("📊 Comfort Score")
-    st.metric("Score", round(score, 2))
+    st.write(f"**Shape:** {formatted['shape']}")
+    st.write(f"**Insulation:** {formatted['insulation']}")
+    st.write(f"**Windows:** {formatted['window']}")
+    st.write(f"**Smart Windows:** {formatted['smart']}")
+    st.divider()
 
-    st.subheader("🧠 Explanation")
-    explanation = generate_explanation(city, score, avg_temp, avg_humidity)
+    st.markdown("## Comfort Score")
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.metric("Comfort Score", round(score, 2))
+
+    with col2:
+        st.write(interpret_score(score))
+    
+    st.progress(score / 100)
+    st.markdown("### What this means")
+
+    st.write(
+        "This design was selected because it performs consistently across all seasons, "
+        "especially during the most uncomfortable months. It avoids extreme discomfort rather than optimizing only for mild conditions."
+    )
+
+    st.divider()
+
+    st.markdown("## Explanation")
+    explanation = generate_explanation(city, score, avg_temp, avg_humidity, formatted)
     st.write(explanation)
+    st.divider()
