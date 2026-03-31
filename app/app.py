@@ -753,21 +753,75 @@ else:
     </div>
     """, unsafe_allow_html=True)
 
-    # city cards
-    st.markdown('<p class="section-tag" style="text-align:center;margin-top:2rem;">Supported Cities</p>',
-                unsafe_allow_html=True)
-    cols = st.columns(len(cities))
-    for i, c in enumerate(cities):
-        cdf   = df[df["city"] == c]
-        temp  = cdf["temp"].mean()
-        with cols[i]:
-            st.markdown(f"""
-            <div class="card" style="text-align:center;padding:1.2rem 0.8rem;cursor:pointer;">
-                <div style="font-size:1.8rem;">{CITY_EMOJI.get(c,'🏙️')}</div>
-                <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;margin-top:0.4rem;">{c.title()}</div>
-                <div style="font-size:0.75rem;color:rgba(232,228,220,0.45);margin-top:0.2rem;">{temp:.1f}°C avg</div>
+    # # city cards
+    # st.markdown('<p class="section-tag" style="text-align:center;margin-top:2rem;">Supported Cities</p>',
+    #             unsafe_allow_html=True)
+    # cols = st.columns(len(cities))
+    # for i, c in enumerate(cities):
+    #     cdf   = df[df["city"] == c]
+    #     temp  = cdf["temp"].mean()
+    #     with cols[i]:
+    #         st.markdown(f"""
+    #         <div class="card" style="text-align:center;padding:1.2rem 0.8rem;cursor:pointer;">
+    #             <div style="font-size:1.8rem;">{CITY_EMOJI.get(c,'🏙️')}</div>
+    #             <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;margin-top:0.4rem;">{c.title()}</div>
+    #             <div style="font-size:0.75rem;color:rgba(232,228,220,0.45);margin-top:0.2rem;">{temp:.1f}°C avg</div>
+    #         </div>
+    #         """, unsafe_allow_html=True)
+
+    # ----------------------------
+# PAGINATION SETUP
+# ----------------------------
+if "city_index" not in st.session_state:
+    st.session_state.city_index = 0
+
+VISIBLE = 5  # number of cards visible at once
+
+total = len(cities)
+
+# ----------------------------
+# NAVIGATION BUTTONS
+# ----------------------------
+col_left, col_center, col_right = st.columns([1, 8, 1])
+
+with col_left:
+    if st.button("⬅️"):
+        st.session_state.city_index = max(0, st.session_state.city_index - VISIBLE)
+
+with col_right:
+    if st.button("➡️"):
+        st.session_state.city_index = min(total - VISIBLE, st.session_state.city_index + VISIBLE)
+
+# ----------------------------
+# DISPLAY CURRENT SLICE
+# ----------------------------
+start = st.session_state.city_index
+end = start + VISIBLE
+visible_cities = cities[start:end]
+
+st.markdown(
+    '<p class="section-tag" style="text-align:center;margin-top:2rem;">Supported Cities</p>',
+    unsafe_allow_html=True
+)
+
+cols = st.columns(len(visible_cities))
+
+for i, c in enumerate(visible_cities):
+    cdf = df[df["city"] == c]
+    temp = cdf["temp"].mean()
+
+    with cols[i]:
+        st.markdown(f"""
+        <div class="card" style="text-align:center;padding:1.2rem 0.8rem;">
+            <div style="font-size:1.8rem;">{CITY_EMOJI.get(c,'🏙️')}</div>
+            <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;margin-top:0.4rem;">
+                {c.title()}
             </div>
-            """, unsafe_allow_html=True)
+            <div style="font-size:0.75rem;color:rgba(232,228,220,0.45);margin-top:0.2rem;">
+                {temp:.1f}°C avg
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
 # ─────────────────────────────────────────────
 #  FOOTER
