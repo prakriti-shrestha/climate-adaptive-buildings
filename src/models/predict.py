@@ -4,10 +4,7 @@ import joblib
 
 from sklearn.ensemble import RandomForestRegressor
 
-
-# ----------------------------
 # LOAD MODEL + DATA
-# ----------------------------
 def load_model():
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     model_path = os.path.join(base_dir, "src/models", "rf_model.pkl")
@@ -26,10 +23,7 @@ def load_data():
 
     return pd.read_csv(path)
 
-
-# ----------------------------
 # PREPROCESS SINGLE INPUT
-# ----------------------------
 def prepare_input(df, city, month, design):
     # get climate for that city + month (average)
     subset = df[(df["city"] == city) & (df["month"] == month)]
@@ -51,10 +45,7 @@ def prepare_input(df, city, month, design):
 
     return pd.DataFrame([row])
 
-
-# ----------------------------
 # ENCODING (same as training)
-# ----------------------------
 def encode(df, reference_columns):
     df = pd.get_dummies(df)
 
@@ -63,15 +54,11 @@ def encode(df, reference_columns):
         if col not in df.columns:
             df[col] = 0
 
-    # remove extra columns (VERY IMPORTANT)
     df = df[reference_columns]
 
     return df
 
-
-# ----------------------------
 # GENERATE ALL DESIGN OPTIONS
-# ----------------------------
 def generate_designs():
     shapes = ["rectangular", "L", "H", "U", "courtyard"]
     insulations = [0, 1, 2]
@@ -93,10 +80,7 @@ def generate_designs():
 
     return designs
 
-
-# ----------------------------
 # FIND BEST DESIGN
-# ----------------------------
 def find_best_design_yearly(model, df, city, reference_columns):
     designs = generate_designs()
 
@@ -139,10 +123,7 @@ def find_best_design_yearly(model, df, city, reference_columns):
 
     return best_design, best_score
 
-
-# ----------------------------
 # EXPLANATION GENERATOR
-# ----------------------------
 def generate_explanation(city, score):
     if score < 50:
         return f"Buildings in {city} will experience significant thermal discomfort across the year. Passive design alone may not be sufficient, and active cooling strategies may be required."
@@ -153,9 +134,7 @@ def generate_explanation(city, score):
     else:
         return f"The climate in {city} is relatively favorable across the year. Standard design strategies are sufficient, with minor improvements through ventilation."
 
-# ----------------------------
 # MAIN
-# ----------------------------
 if __name__ == "__main__":
     df = load_data()
     model = load_model()

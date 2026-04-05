@@ -2,11 +2,7 @@ import pandas as pd
 import os
 import itertools
 
-
-# ---------------------------------------------------------------------------
-# PHYSICAL CEILING  (climate hard-limit — unchanged)
-# ---------------------------------------------------------------------------
-
+# PHYSICAL CEILING  
 def _passive_cooling_ceiling(temp: float) -> float:
     """Maximum achievable comfort via passive means given outdoor temp."""
     if temp <= 26:
@@ -16,11 +12,7 @@ def _passive_cooling_ceiling(temp: float) -> float:
     else:
         return max(0.0, 68.5 - 5.5 * (temp - 35))
 
-
-# ---------------------------------------------------------------------------
 # STEP 1 — BASELINE CLIMATE COMFORT
-# ---------------------------------------------------------------------------
-
 def compute_climate_baseline(temp: float, humidity: float, wind: float) -> float:
     score = 100.0
 
@@ -50,33 +42,12 @@ def compute_climate_baseline(temp: float, humidity: float, wind: float) -> float
     ceiling = _passive_cooling_ceiling(temp)
     return max(0.0, min(ceiling, score))
 
-
-# ---------------------------------------------------------------------------
 # STEP 2 — CLIMATE-SENSITIVE SHAPE FACTORS
-#
-# KEY FIX: Shape effectiveness depends on the climate regime.
-#
-# Regime classification:
-#   hot_dry   : temp > 30, humidity < 50  → Ahmedabad summer, Delhi summer
-#   hot_humid : temp > 28, humidity > 65  → Chennai, Mumbai, Kolkata
-#   cold      : temp < 16                 → Delhi winter
-#   mild      : otherwise                 → Bangalore, transitional months
-#
-# Physical rationale:
-#   Courtyard  — radiant cooling at night is powerful in dry air; but traps
-#                stagnant humid air, making it worse than H/U in humid climates.
-#   H / U      — dual-wing geometries channel prevailing wind through the core;
-#                most effective when humidity blunts the courtyard stack effect.
-#   L          — asymmetric exposure, good in mild climates with variable wind.
-#   Rectangular — compact envelope; best in cold conditions to minimise surface
-#                area and heat loss.
-# ---------------------------------------------------------------------------
-
 def _shape_factor(shape: str, temp: float, humidity: float) -> float:
     """
     Returns a [0, 1] shape effectiveness factor that varies with climate.
     """
-    # ── Classify the thermal regime ──────────────────────────────────────
+    # Classify the thermal regime
     hot_dry   = temp > 30 and humidity < 50
     hot_humid = temp > 28 and humidity > 65
     mild_warm = 20 <= temp <= 30 and humidity <= 65
@@ -109,10 +80,10 @@ def _shape_factor(shape: str, temp: float, humidity: float) -> float:
             "L":           0.40,
             "H":           0.30,
             "U":           0.22,
-            "courtyard":   0.12,   # worst in cold — exposed, loses heat rapidly
+            "courtyard":   0.12,   # worst in cold - exposed, loses heat rapidly
         }
     elif mild_warm:
-        # Moderate climate — all shapes viable, courtyard still good
+        # Moderate climate - all shapes viable, courtyard still good
         factors = {
             "courtyard":   0.58,
             "U":           0.50,
@@ -132,15 +103,7 @@ def _shape_factor(shape: str, temp: float, humidity: float) -> float:
 
     return factors.get(shape, 0.10)
 
-
-# ---------------------------------------------------------------------------
 # STEP 3 — CLIMATE-SENSITIVE INSULATION FACTORS
-#
-# In cold climates insulation is critical (traps warmth).
-# In hot-humid climates it helps but ventilation is more important.
-# In hot-dry climates it delays heat ingress — highly effective.
-# ---------------------------------------------------------------------------
-
 def _insulation_factor(insulation: int, temp: float) -> float:
     base = {0: 0.00, 1: 0.30, 2: 0.60}.get(insulation, 0.0)
 
@@ -155,11 +118,7 @@ def _insulation_factor(insulation: int, temp: float) -> float:
 
     return min(1.0, base * eff)
 
-
-# ---------------------------------------------------------------------------
 # STEP 4 — CLIMATE-SENSITIVE WINDOW FACTORS
-# ---------------------------------------------------------------------------
-
 WINDOW_BASE = {0.2: 0.10, 0.4: 0.30, 0.6: 0.45}
 
 WINDOW_HEAT_PENALTY = {
@@ -198,11 +157,7 @@ def _window_factor(
 
     return win_contrib
 
-
-# ---------------------------------------------------------------------------
 # DESIGN INFLUENCE & BONUS  (climate-aware combination)
-# ---------------------------------------------------------------------------
-
 DESIGN_INFLUENCE = 0.40   # design recovers ~40% of the gap between baseline and ceiling
 
 
@@ -224,7 +179,7 @@ def compute_design_bonus(
     ins_contrib   = _insulation_factor(insulation, temp)
     win_contrib   = _window_factor(window_ratio, smart_window, temp, humidity)
 
-    # Geometric mean — prevents a single strong parameter from dominating
+    # Geometric mean - prevents a single strong parameter from dominating
     combined = (
         (shape_contrib + 0.01) *
         (ins_contrib   + 0.01) *
@@ -238,11 +193,7 @@ def compute_design_bonus(
 
     return DESIGN_INFLUENCE * gap * normalised
 
-
-# ---------------------------------------------------------------------------
 # FULL COMFORT SCORE
-# ---------------------------------------------------------------------------
-
 def compute_comfort(
     temp: float,
     humidity: float,
@@ -260,11 +211,7 @@ def compute_comfort(
     )
     return round(max(0.0, min(ceiling, baseline + bonus)), 6)
 
-
-# ---------------------------------------------------------------------------
 # DATASET GENERATION
-# ---------------------------------------------------------------------------
-
 def generate_dataset() -> pd.DataFrame:
     base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -306,11 +253,7 @@ def generate_dataset() -> pd.DataFrame:
     final_df.to_csv(output_path, index=False)
     return final_df
 
-
-# ---------------------------------------------------------------------------
 # ANALYSIS HELPERS
-# ---------------------------------------------------------------------------
-
 def get_best_per_month(df: pd.DataFrame) -> pd.DataFrame:
     return df.loc[df.groupby(["city", "year", "month"])["comfort"].idxmax()]
 
@@ -335,11 +278,7 @@ def worst_month_per_city(best_df: pd.DataFrame) -> pd.DataFrame:
     worst = best_df.loc[best_df.groupby(["city", "year"])["comfort"].idxmin()]
     return worst.sort_values(["city", "year"])
 
-
-# ---------------------------------------------------------------------------
 # DIAGNOSTIC — verify climate-driven design differentiation
-# ---------------------------------------------------------------------------
-
 def design_spread_diagnostic(label: str, temp: float, humidity: float, wind: float) -> None:
     """
     Print comfort for every design combo at fixed climate inputs.
@@ -365,17 +304,13 @@ def design_spread_diagnostic(label: str, temp: float, humidity: float, wind: flo
     print(f"  Baseline: {baseline:.2f}  |  Ceiling: {ceiling:.2f}")
     print(f"  Design spread: {diag['comfort'].min():.2f} – {diag['comfort'].max():.2f}  "
           f"(Δ = {diag['comfort'].max() - diag['comfort'].min():.2f})")
-    print(f"  🏆 Best shape: {diag.iloc[0]['shape']}  "
+    print(f"  Best shape: {diag.iloc[0]['shape']}  "
           f"(insulation={diag.iloc[0]['insulation']}, "
           f"window={diag.iloc[0]['window_ratio']}, "
           f"smart={diag.iloc[0]['smart_window']})")
     print(diag[["shape","insulation","window_ratio","smart_window","comfort"]].head(6).to_string(index=False))
 
-
-# ---------------------------------------------------------------------------
 # MAIN
-# ---------------------------------------------------------------------------
-
 if __name__ == "__main__":
     print("=" * 60)
     print("CLIMATE-SENSITIVE DESIGN SPREAD DIAGNOSTICS")
@@ -403,12 +338,12 @@ if __name__ == "__main__":
     df      = generate_dataset()
     best_df = get_best_per_month(df)
 
-    print("\n--- Shape distribution in best designs (should be DIVERSE) ---")
+    print("\n Shape distribution in best designs (should be DIVERSE)")
     print(best_df["shape"].value_counts())
 
-    print("\n--- Best shape per city (should differ by city) ---")
+    print("\n Best shape per city (should differ by city)")
     city_shapes = best_df.groupby("city")["shape"].agg(lambda x: x.value_counts().index[0])
     print(city_shapes)
 
-    print("\n--- Comfort range per city ---")
+    print("\n Comfort range per city")
     print(comfort_range_per_city(best_df))

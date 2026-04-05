@@ -7,9 +7,7 @@ import plotly.express as px
 import itertools
 import numpy as np
 
-# ─────────────────────────────────────────────
 #  PAGE CONFIG  (must be first Streamlit call)
-# ─────────────────────────────────────────────
 st.set_page_config(
     page_title="ClimateForm — Adaptive Building Design",
     page_icon="🏛️",
@@ -17,9 +15,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
-# ─────────────────────────────────────────────
 #  GLOBAL CSS
-# ─────────────────────────────────────────────
 st.markdown("""
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap');
@@ -223,10 +219,7 @@ button[kind="primary"], .stButton > button {
 </style>
 """, unsafe_allow_html=True)
 
-
-# ─────────────────────────────────────────────
 #  DATA & MODEL LOADING
-# ─────────────────────────────────────────────
 @st.cache_resource
 def load_model():
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -242,9 +235,7 @@ def load_features():
     base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     return joblib.load(os.path.join(base_dir, "src", "models", "features.pkl"))
 
-# ─────────────────────────────────────────────
 #  ENCODING & DESIGN HELPERS
-# ─────────────────────────────────────────────
 def encode(df, reference_columns):
     df = pd.get_dummies(df)
     for col in reference_columns:
@@ -311,9 +302,7 @@ def get_all_design_scores(_model, city, _features):
         results.append({**design, "min_score": min(scores), "avg_score": np.mean(scores)})
     return pd.DataFrame(results)
 
-# ─────────────────────────────────────────────
 #  PLOT HELPERS
-# ─────────────────────────────────────────────
 PLOTLY_BASE = dict(
     paper_bgcolor="rgba(0,0,0,0)",
     plot_bgcolor="rgba(0,0,0,0)",
@@ -442,9 +431,7 @@ def plot_future_projection(base_score):
                   annotation_font_size=11)
     return fig
 
-# ─────────────────────────────────────────────
 #  FORMAT HELPERS
-# ─────────────────────────────────────────────
 SHAPE_META = {
     "rectangular": ("🟥", "Rectangular", "Standard footprint. Efficient but limited passive ventilation. Best for mild climates."),
     "L":           ("📐", "L-Shaped",    "Corner opening creates localised cross-ventilation. 18% better than rectangular."),
@@ -467,9 +454,7 @@ def interpret_score(score):
     return                  "✅", "Excellent Comfort",   "Naturally comfortable. Passive design is largely sufficient."
 
 
-# ─────────────────────────────────────────────
 #  LOAD EVERYTHING
-# ─────────────────────────────────────────────
 df       = load_data()
 model    = load_model()
 features = load_features()
@@ -478,17 +463,13 @@ cities   = sorted(df["city"].unique())
 CITY_EMOJI = {"chennai":"🌊","ahmedabad":"🔆","delhi":"🏙️","mumbai":"🌴",
               "hyderabad":"🌺","kolkata":"🌧️","pune":"⛰️"}
 
-# ─────────────────────────────────────────────
 #  HERO
-# ─────────────────────────────────────────────
 st.markdown("""
 <p class="hero-title">ClimateForm</p>
 <p class="hero-sub">Physics-informed building design optimisation for India's warming cities · Random Forest · 1981–2025</p>
 """, unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────
 #  CITY SELECTOR ROW
-# ─────────────────────────────────────────────
 col_sel, col_btn, col_spacer = st.columns([2, 1, 4])
 with col_sel:
     city = st.selectbox("", cities,
@@ -499,9 +480,7 @@ with col_btn:
 
 st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────
 #  MAIN ANALYSIS
-# ─────────────────────────────────────────────
 if run:
     with st.spinner(""):
         best_design, score, monthly_scores = find_best_design_yearly(model, city, features)
@@ -518,7 +497,7 @@ if run:
     ins_icon, ins_name, ins_desc        = INS_META[best_design["insulation"]]
     win_icon, win_name, win_desc        = WIN_META[best_design["window_ratio"]]
 
-    # ── TOP ROW: Score + Design ──────────────────
+    # TOP ROW: Score + Design 
     top_left, top_right = st.columns([1, 2], gap="large")
 
     with top_left:
@@ -572,7 +551,7 @@ if run:
 
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
 
-    # ── TABS ────────────────────────────────────
+    # TABS 
     tab1, tab2, tab3, tab4 = st.tabs([
         "📅  Monthly Comfort",
         "🌡️  Climate Profile",
@@ -686,7 +665,7 @@ if run:
 
     st.markdown('<div class="divider"></div>', unsafe_allow_html=True)
 
-    # ── FULL EXPLANATION CARD ────────────────────
+    # FULL EXPLANATION CARD 
     st.markdown('<p class="section-tag">Detailed Design Justification</p>', unsafe_allow_html=True)
     st.markdown(f'<p class="section-title">Why this design works for {city.title()}</p>',
                 unsafe_allow_html=True)
@@ -739,7 +718,7 @@ if run:
         """, unsafe_allow_html=True)
 
 else:
-    # ── IDLE STATE ──────────────────────────────
+    # IDLE STATE 
     st.markdown("""
     <div style="text-align:center;padding:4rem 2rem;color:rgba(232,228,220,0.35);">
         <div style="font-size:3.5rem;margin-bottom:1rem;">🏛️</div>
@@ -753,25 +732,7 @@ else:
     </div>
     """, unsafe_allow_html=True)
 
-    # # city cards
-    # st.markdown('<p class="section-tag" style="text-align:center;margin-top:2rem;">Supported Cities</p>',
-    #             unsafe_allow_html=True)
-    # cols = st.columns(len(cities))
-    # for i, c in enumerate(cities):
-    #     cdf   = df[df["city"] == c]
-    #     temp  = cdf["temp"].mean()
-    #     with cols[i]:
-    #         st.markdown(f"""
-    #         <div class="card" style="text-align:center;padding:1.2rem 0.8rem;cursor:pointer;">
-    #             <div style="font-size:1.8rem;">{CITY_EMOJI.get(c,'🏙️')}</div>
-    #             <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:0.85rem;margin-top:0.4rem;">{c.title()}</div>
-    #             <div style="font-size:0.75rem;color:rgba(232,228,220,0.45);margin-top:0.2rem;">{temp:.1f}°C avg</div>
-    #         </div>
-    #         """, unsafe_allow_html=True)
-
-    # ----------------------------
 # PAGINATION SETUP
-# ----------------------------
 if "city_index" not in st.session_state:
     st.session_state.city_index = 0
 
@@ -779,9 +740,7 @@ VISIBLE = 5  # number of cards visible at once
 
 total = len(cities)
 
-# ----------------------------
 # NAVIGATION BUTTONS
-# ----------------------------
 col_left, col_center, col_right = st.columns([1, 8, 1])
 
 with col_left:
@@ -792,9 +751,7 @@ with col_right:
     if st.button("➡️"):
         st.session_state.city_index = min(total - VISIBLE, st.session_state.city_index + VISIBLE)
 
-# ----------------------------
 # DISPLAY CURRENT SLICE
-# ----------------------------
 start = st.session_state.city_index
 end = start + VISIBLE
 visible_cities = cities[start:end]
@@ -823,9 +780,7 @@ for i, c in enumerate(visible_cities):
         </div>
         """, unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────
 #  FOOTER
-# ─────────────────────────────────────────────
 st.markdown("""
 <div class="divider"></div>
 <div style="text-align:center;font-size:0.75rem;color:rgba(232,228,220,0.25);padding-bottom:2rem;">
